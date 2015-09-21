@@ -91,10 +91,17 @@ abstract class ItemBase
      */
     public function getQueryScope()
     {
+       return $this->getQuery();
+    }
+    
+    
+    public function getQuery()
+    {
         $model = $this->getModel();
         $query = new $model;
         return $query;
     }
+    
     
     /**
      * Helper method to get the Primary key name field of this model
@@ -143,10 +150,8 @@ abstract class ItemBase
                         $key = $model->{$field}()->getRelated()->getQualifiedKeyName();
        	                $value = $model->{$field}()->select($key)
        	                                           ->distinct() 
-       	                                           ->lists($key);
-       	                //Log::info($value);
-       	               
-       	                
+       	                                           ->lists($key);      	               
+
        	                // log::debug( 'Memory usage ' . round(memory_get_usage() / 1048576, 2) . 'Mb');
        	            }catch (\BadMethodCallException $e){
        	                $value = $model->{$field};
@@ -164,12 +169,10 @@ abstract class ItemBase
                     'message' => $e->getMessage(),
                     //'stack'   => $e->getTraceAsString()
        	       ]); 
-       	    } finally {
-       	        $data[$field] = $value or '';
-       	        
-       	        //$valDebug = (is_array($value)) ? $value : [$value];
-       	        //Log::debug($feature, $valDebug);
        	    }
+       	    
+       	    $data[$field] = $value or '';          	        
+
        	}
        	return $data;
     }
@@ -263,12 +266,16 @@ abstract class ItemBase
         		}
         		
         		forEach($options as $k){
-        		    $k = (is_array($k)) ? array_shift($k) : $k;
-        			$opts[$k] = ucfirst($k);
-        			
-        			if($emptyValue && is_null($default)){
-        			    $default = $k;
-        			}
+           		    $k = (is_array($k)) ? array_shift($k) : $k;
+           		    
+           		    // If option starts with underscore don't include in settings
+           		    if (substr( $k, 0, 1 ) !== "_") {   
+           		        $opts[$k] = ucfirst($k);
+            			
+            			if($emptyValue && is_null($default)){
+            			    $default = $k;
+            			}
+        		    }
         		}
         		
         		if(!is_null($default)){
@@ -363,7 +370,15 @@ abstract class ItemBase
             // Check if a method exists in this item
             $filterMethod = 'filter' . $this->underscoreToCamelCase($f, true);
             if (method_exists($this, $filterMethod) ){     
-                $filterExpressions[$f] = $this->{$filterMethod}($backend);
+                $exp = $this->{$filterMethod}($backend);
+                
+                if(is_string($exp)) {
+                    // Clean up string
+                    $exp = str_replace(["\n","\r"], '', $exp);
+                    $exp = $this->normalizeWhiteSpace($exp);
+                }
+                
+                $filterExpressions[$f] = $exp;
             }       
         }
         
@@ -391,18 +406,33 @@ abstract class ItemBase
     }    
     
     /**
-     * Return an associative array 
-     * @return array
      * Return an array where key is the field name that is related to other Recommendation Item
      * and the value is the name full namesapce of the Recommendation Item 
-     * 
+     * @return array
      * eg. [ 'users' => DMA\Recommendations\Classes\Items\UserItem ]
      */
     public function getItemRelations()
     {
         return [];
     }
-
+    
+    /**
+     * Return an array where the key is the feature name
+     * and the value is are the rules use to determinate
+     * if an item should always present in the result regardless
+     * if this is part of the recomendation or not
+     * 
+     * @return array
+     * 
+     * eg. [ 'priority' => 11 ]
+     */
+    public function getStickyItemRules()
+    {
+        // TODO : implement operators 
+        // [ 'priority' => ['gte' => 10 ]]
+        return [];
+    }
+    
     /**
      * Return an array of events namespaces that will be bind
      * to keep updated this Recommendation Item in each engine backend.

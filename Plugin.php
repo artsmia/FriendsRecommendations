@@ -1,5 +1,7 @@
 <?php namespace DMA\Recommendations;
 
+ini_set('memory_limit', '1024M');
+
 use Event;
 use System\Classes\PluginBase;
 use DMA\Recommendations\Models\Settings;
@@ -40,7 +42,7 @@ class Plugin extends PluginBase
     public function registerPermissions()
     {
     	return [
-    	'dma.recommendations.access_admin'  => ['label' => 'Manage Recommendation engine'],
+            'dma.recommendations.access_admin'  => ['label' => 'Manage Recommendation engine'],
     	];
     }
     
@@ -51,14 +53,15 @@ class Plugin extends PluginBase
     public function registerSettings()
     {
     	return [
-    	'settings' => [
-        	'label'           => 'Recommendation Engine',
-        	'description'     => 'Manage Friends recommendations settings.',
-        	'category'        => 'Friends',
-        	'icon'            => 'icon-cog',
-        	'class'           => 'DMA\Recommendations\Models\Settings',
-        	'order'           => 501,
-        	],
+            'settings' => [
+                'label'        => 'Recommendation Engine',
+                'description'  => 'Manage Friends recommendations settings.',
+                'category'     => 'Friends',
+                'icon'         => 'icon-cog',
+                'class'        => 'DMA\Recommendations\Models\Settings',
+                'order'        => 501,
+                'permissions'  => ['dma.recommendations.*'],
+            ],
     	];
     }
 
@@ -129,4 +132,17 @@ class Plugin extends PluginBase
     	$this->registerConsoleCommand('clean-engine',      'DMA\Recommendations\Commands\CleanEngineCommand');
     	$this->registerConsoleCommand('update-item',       'DMA\Recommendations\Commands\UpdateItemCommand');
     }
+    
+    /**
+     * Register Friends API resource endpoints
+     *
+     * @return array
+     */
+    public function registerFriendAPIResources()
+    {
+        return [
+                'recommendations'      => 'DMA\Recommendations\API\Resources\RecommendationResource',
+        ];
+    }
+    
 }

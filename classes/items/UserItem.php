@@ -67,8 +67,8 @@ class UserItem extends ItemBase
 	public function getFeatures()
 	{
 		return [
-		    'activities',
-		    'badges'
+		    ['activities', 'type' => 'string', 'index' => 'not_analyzed'],
+		    ['badges',     'type' => 'string', 'index' => 'not_analyzed'],
 		];
 	}	
 

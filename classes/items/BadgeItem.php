@@ -67,7 +67,7 @@ class BadgeItem extends ItemBase
 	public function getFeatures()
 	{
 	    return [
-	        'users',	        
+	        ['users',      'type' => 'string', 'index' => 'not_analyzed'],   
             'categories',
 	    ];
 	}
@@ -79,7 +79,8 @@ class BadgeItem extends ItemBase
 	public function getFilters()
 	{
 		return [
-		  ['time_restrictions', 'type' => 'object']
+		  ['time_restrictions', 'type' => 'object'],
+		  ['is_active',  'type' => 'boolean' ]
         ];
 	}	
   
@@ -104,6 +105,17 @@ class BadgeItem extends ItemBase
 	       'users' => '\DMA\Recommendations\Classes\Items\UserItem',
 	    ];
 	}	
+	
+	/**
+	 * {@inheritDoc}
+	 * @see \DMA\Recommendations\Classes\Items\ItemBase::getStickyItemRules()
+	 */
+	public function getStickyItemRules()
+	{
+	    return [
+	            'priority' => 11 # Always visible 
+	    ];
+	}
 
 	/**
 	 * {@inheritDoc}
@@ -122,7 +134,8 @@ class BadgeItem extends ItemBase
 		
 	
 	// PREPARE DATA METHODS
-	public function getCategories($model){
+	public function getCategories($model)
+	{
 	
 		$clean = [];
 		$model->categories->each(function($r) use (&$clean){
@@ -132,8 +145,15 @@ class BadgeItem extends ItemBase
 		return $clean;
 	
 	}	
+
+	public function getIsActive($model)
+	{
+	    return (!$model->is_archived && $model->is_published);
+	}
 	
-	public function getTimeRestrictions($model){
+	
+	public function getTimeRestrictions($model)
+	{
 	
 	    $restrictions = [];
 	    $keys         = ['date_begin', 'date_end'];
@@ -184,12 +204,21 @@ class BadgeItem extends ItemBase
         // and also include date_end that is null ( assuming null = don't have end restrictions )
         $filter .= "( time_restrictions.date_end:[ now TO * ] OR
                      _missing_:time_restrictions.date_end )";
-            
-    	// Clean up string
-    	$filter = str_replace(["\n","\r"], '', $filter);
-    	$filter = $this->normalizeWhiteSpace($filter);
+
     	return $filter;
     	
-	
-	}	
+	}
+
+	public function filterIsActive($backend)
+	{
+	    // Because there are badge without time restricitons but they are archived or not published
+	    // is better exclude them as well.
+        $filter = 'is_active:true';
+        
+        // Excluded from recomendations items with priority = 0 ( Hide )
+        $filter .= ' AND ';
+        $filter .= '-priority:0';
+        
+	    return $filter;
+	}
 }

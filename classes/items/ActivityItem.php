@@ -73,8 +73,8 @@ class ActivityItem extends ItemBase
 	public function getFeatures()
 	{
 		return [
-		    'users',
-		    'categories'
+		    ['users',      'type' => 'string', 'index' => 'not_analyzed'],  
+            'categories',
 		];
 	}	
 
@@ -86,8 +86,9 @@ class ActivityItem extends ItemBase
 	public function getFilters()
 	{
 		return [
-		  ['time_restrictions', 'type' => 'object']
-        ];
+		  ['time_restrictions', 'type' => 'object'],
+		  ['is_active',  'type' => 'boolean' ]      
+		];
 	}	
 	
 	/**
@@ -112,6 +113,17 @@ class ActivityItem extends ItemBase
 	    ];
 	}
 
+	/**
+	 * {@inheritDoc}
+	 * @see \DMA\Recommendations\Classes\Items\ItemBase::getStickyItemRules()
+	 */
+	public function getStickyItemRules()
+	{
+	   return [
+	      'priority' => 11 # Always visible 
+	   ];   
+	}
+	
 	/**
 	 * {@inheritDoc}
 	 * @see \DMA\Recommendations\Classes\Items\ItemBase::getUpdateAtEvents()
@@ -154,7 +166,8 @@ class ActivityItem extends ItemBase
 	
 	
 	// PREPARE DATA METHODS
-	public function getCategories($model){
+	public function getCategories($model)
+	{
 
 	    $clean = [];
 	    $model->categories->each(function($r) use (&$clean){
@@ -165,7 +178,14 @@ class ActivityItem extends ItemBase
 
 	}
 	
-	public function getTimeRestrictions($model){
+	public function getIsActive($model)
+	{
+	    return (!$model->is_archived && $model->is_published);
+	}
+	
+	
+	public function getTimeRestrictions($model)
+	{
 	       
 	    $restrictions = [];
 	    $keys         = ['date_begin', 'date_end', 'start_time', 'end_time', 'days'];
@@ -269,13 +289,22 @@ class ActivityItem extends ItemBase
                       time_restrictions.date_end:[ now TO * ] AND 
                       time_restrictions.start_time:[ * TO $time ] AND 
                       time_restrictions.end_time:[ $time TO * ] )";
-        
-        // Clean up string
-        $filter = str_replace(["\n","\r"], '', $filter);  
-        $filter = $this->normalizeWhiteSpace($filter); 
+                
         return $filter;
+       
+    }
+    
+    public function filterIsActive($backend)
+    {
+        // Because there are activities without time restricitons but they are archived or not published
+        // is better exclude them as well.
+        $filter = 'is_active:true';
         
-
+        // Excluded from recomendations items with priority = 0 ( Hide )
+        $filter .= ' AND ';
+        $filter .= '-priority:0';
+        
+        return $filter;
     }
     
     
